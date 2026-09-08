@@ -26,6 +26,8 @@ void InitIO()
     _TRISJ11 = 0; // LED Rouge
     _TRISH10 = 0; // LED Verte 
     
+    _TRISJ10 = 0; //PWM Enable
+    
 
     
     //****** Moteurs ************************

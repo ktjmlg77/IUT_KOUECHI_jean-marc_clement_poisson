@@ -3,24 +3,31 @@
 #include <xc.h>
 #include "ChipConfig.h"
 #include "IO.h"
-int main (void){
-//Initialisation oscillateur
-InitOscillator();
-// Configuration des input et output (IO)
-InitIO();
-LED_BLANCHE_1 = 1;
-LED_BLEUE_1 = 1;
-LED_ORANGE_1 = 1;
-LED_ROUGE_1 = 1;
-LED_VERTE_1 = 1;
-// Boucle Principale
-while(1)
-{
-    
-    
-} 
+#include "timer.h"
+#include "PWM.h"
 
-// fin main
+int main(void) {
+    //Initialisation oscillateur
+    InitOscillator();
+    // Configuration des input et output (IO)
+    InitIO();
+    InitPWM();
+    InitTimer1();
+    InitTimer23();
+    LED_BLANCHE_1 = 0;
+    LED_BLEUE_1 = 0;
+    LED_ORANGE_1 = 0;
+    LED_ROUGE_1 = 0;
+    LED_VERTE_1 = 0;
+    PWM_EN = 1;
+    
+    PWMSetSpeed(-20);
+    // Boucle Principale
+    while (1) {
+     ;
+    }
+
+    // fin main
 }
 
 
