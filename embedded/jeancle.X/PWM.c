@@ -2,25 +2,65 @@
 #include "IO.h"
 #include "PWM.h"
 #include "ToolBox.h"
-#define PWMPER 24.0
+#include "Robot.h"
+
+
 void InitPWM(void) {
-PTCON2bits.PCLKDIV = 0b000; //Divide by 1
-PTPER = 100 * PWMPER; //éPriode en pourcentage
-//éRglage PWM moteur 1 sur hacheur 1
-IOCON1bits.PMOD = 0b11; //PWM I/O pin pair is in the True Independent Output mode
-IOCON1bits.PENL = 1;
-IOCON1bits.PENH = 1;
-FCLCON1 = 0x0003; //éDsactive la gestion des faults
-IOCON2bits.PMOD = 0b11; //PWM I/O pin pair is in the True Independent Output mode
-IOCON2bits.PENL = 1;
-IOCON2bits.PENH = 1;
-FCLCON2 = 0x0003; //éDsactive la gestion des faults
-/* Enable PWM Module */
-PTCONbits.PTEN = 1;
+    PTCON2bits.PCLKDIV = 0b000; //Divide by 1
+    PTPER = 100 * PWMPER; //éPriode en pourcentage
+    //éRglage PWM moteur 1 sur hacheur 1
+    IOCON1bits.PMOD = 0b11; //PWM I/O pin pair is in the True Independent Output mode
+    IOCON1bits.PENL = 1;
+    IOCON1bits.PENH = 1;
+    FCLCON1 = 0x0003; //éDsactive la gestion des faults
+    IOCON2bits.PMOD = 0b11; //PWM I/O pin pair is in the True Independent Output mode
+    IOCON2bits.PENL = 1;
+    IOCON2bits.PENH = 1;
+    FCLCON2 = 0x0003; //éDsactive la gestion des faults
+    /* Enable PWM Module */
+    PTCONbits.PTEN = 1;
 }
-double talon = 50;
-void PWMSetSpeed(float vitesseEnPourcents)
-{
-PDC1 = Abs(vitesseEnPourcents) * PWMPER + talon;
-SDC1 = talon;
+
+
+
+void  PWMSetSpeedConsigne(char moteur,float vitessepourcent){
+    if (moteur == "1"){
+        robotState.vitesseGaucheConsigne = vitessepourcent;
+    }
+    else if (moteur == "2"){
+        robotState.vitesseDroiteConsigne = vitessepourcent;
+    }
 }
+
+
+
+
+
+
+
+
+/*
+void PWMSetSpeed(uint8_t moteur,float vitesseEnPourcents) {
+    
+    if(moteur == 1){
+    if (vitesseEnPourcents >= 0) {
+        PDC1 = vitesseEnPourcents * PWMPER + talon;
+        SDC1 = talon;
+    } else {
+        SDC1 = Abs(vitesseEnPourcents) * PWMPER + talon;
+        PDC1 = talon;
+    }
+    }
+    else if(moteur == 2){
+    if (vitesseEnPourcents >= 0) {
+        SDC2 = vitesseEnPourcents * PWMPER + talon;
+        PDC2 = talon;
+    } else {
+        PDC2 = Abs(vitesseEnPourcents) * PWMPER + talon;
+        SDC2 = talon;
+    }
+    }
+    else{return;}
+
+}
+*/

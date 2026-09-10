@@ -1,6 +1,7 @@
 #ifndef ROBOT_H
 #define ROBOT_H
 
+
 typedef struct robotStateBITS {
     unsigned char taskEnCours;
     float vitesseGaucheConsigne;
@@ -11,4 +12,7 @@ typedef struct robotStateBITS {
 
 
 extern volatile ROBOT_STATE_BITS robotState;
+
+void PWMUpdateSpeed(void);
+
 #endif /* ROBOT_H */

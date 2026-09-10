@@ -20,11 +20,12 @@ int main(void) {
     LED_ROUGE_1 = 0;
     LED_VERTE_1 = 0;
     PWM_EN = 1;
-    
-    PWMSetSpeed(-20);
+
+    PWMSetSpeedConsigne(D,20);
+    PWMSetSpeedConsigne(G,20);
     // Boucle Principale
     while (1) {
-     ;
+           ;
     }
 
     // fin main
