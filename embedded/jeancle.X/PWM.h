@@ -8,8 +8,8 @@
 #ifndef PWM_H
 #define	PWM_H
 
-#define G "1"
-#define D "2"
+#define G 1
+#define D 2
 
 #define PWMPER 24.0
 

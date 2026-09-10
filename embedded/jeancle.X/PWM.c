@@ -24,10 +24,10 @@ void InitPWM(void) {
 
 
 void  PWMSetSpeedConsigne(char moteur,float vitessepourcent){
-    if (moteur == "1"){
+    if (moteur == 1){
         robotState.vitesseGaucheConsigne = vitessepourcent;
     }
-    else if (moteur == "2"){
+    else if (moteur == 2){
         robotState.vitesseDroiteConsigne = vitessepourcent;
     }
 }
