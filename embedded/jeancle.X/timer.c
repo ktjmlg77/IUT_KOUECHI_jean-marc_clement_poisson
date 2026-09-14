@@ -3,6 +3,7 @@
 #include "IO.h"
 #include "PWM.h"
 #include "Robot.h"
+#include "ADC.h"
 //Initialisation d?un timer 16 bits
 
 unsigned char toggle = 0;
@@ -26,7 +27,7 @@ void InitTimer1(void) {
 void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
     IFS0bits.T1IF = 0;
     PWMUpdateSpeed();
-    LED_BLANCHE_1 = !LED_BLANCHE_1;
+    ADC1StartConversionSequence();
 }
 //Initialisation d?un timer 32 bits
 
@@ -47,19 +48,21 @@ void InitTimer23(void) {
 }
 
 //Interruption du timer 32 bits sur 2-3
-/*
+
 void __attribute__((interrupt, no_auto_psv)) _T3Interrupt(void) {
     IFS0bits.T3IF = 0; // Clear Timer3 Interrupt Flag
+    
     if (toggle == 0) {
-        PWMSetSpeed(D, 20);
-        PWMSetSpeed(G, 20);
+        PWMSetSpeedConsigne(D, 20);
+        PWMSetSpeedConsigne(G, 20);
         toggle = 1;
     } else {
-        PWMSetSpeed(D, -20);
-        PWMSetSpeed(G, -20);
+        PWMSetSpeedConsigne(D, -20);
+        PWMSetSpeedConsigne(G, -20);
         toggle = 0;
     }
+      
 }
- */
+ 
 
 
