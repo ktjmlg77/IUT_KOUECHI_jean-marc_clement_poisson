@@ -1,0 +1,16 @@
+build/default/production/main.o: main.c ADC.h ChipConfig.h IO.h timer.h \
+ PWM.h Robot.h main.h
+
+ADC.h:
+
+ChipConfig.h:
+
+IO.h:
+
+timer.h:
+
+PWM.h:
+
+Robot.h:
+
+main.h:

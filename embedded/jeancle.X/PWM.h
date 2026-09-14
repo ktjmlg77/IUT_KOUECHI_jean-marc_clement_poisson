@@ -8,8 +8,8 @@
 #ifndef PWM_H
 #define	PWM_H
 
-#define G 1
-#define D 2
+#define  MOTEUR_GAUCHE 1
+#define  MOTEUR_DROIT 2
 
 #define PWMPER 24.0
 
@@ -17,7 +17,7 @@
 
 
 void InitPWM(void);
-void  PWMSetSpeedConsigne(char moteur,float vitessepourcent);
+void PWMSetSpeedConsigne(float vitessepourcent, unsigned char moteur);
 //void PWMSetSpeed(uint8_t moteur,float vitesseEnPourcents);
 
 #endif	/* PWM_H */

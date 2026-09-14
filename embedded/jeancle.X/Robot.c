@@ -5,7 +5,7 @@
 #include "xc.h"
 
 volatile ROBOT_STATE_BITS robotState;
-float acceleration = 5;
+float acceleration = 50;
 double talon = 50;
 void PWMUpdateSpeed() {
 
@@ -33,10 +33,10 @@ void PWMUpdateSpeed() {
             robotState.vitesseDroiteCommandeCourante - acceleration,
             robotState.vitesseDroiteConsigne);
     if (robotState.vitesseDroiteCommandeCourante >= 0) {
-        PDC1 = robotState.vitesseGaucheCommandeCourante * PWMPER + talon;
-        SDC1 = talon;
+        PDC2 = robotState.vitesseDroiteCommandeCourante * PWMPER + talon;
+        SDC2 = talon;
     } else {
-        PDC1 = talon;
-        SDC1 = -robotState.vitesseGaucheCommandeCourante * PWMPER + talon;
+        PDC2 = talon;
+        SDC2 = -robotState.vitesseDroiteCommandeCourante * PWMPER + talon;
     }
 }
