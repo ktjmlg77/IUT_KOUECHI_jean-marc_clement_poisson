@@ -48,8 +48,8 @@ void OperatingSystemLoop(void) {
             SetNextRobotStateInAutomaticMode();
             break;
         case STATE_TOURNE_SUR_PLACE_GAUCHE:
-            PWMSetSpeedConsigne(25, MOTEUR_DROIT);
-            PWMSetSpeedConsigne(-25, MOTEUR_GAUCHE);
+            PWMSetSpeedConsigne(10, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-10, MOTEUR_GAUCHE);
             stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE_EN_COURS;
             break;
         case STATE_TOURNE_SUR_PLACE_GAUCHE_EN_COURS:
@@ -73,6 +73,7 @@ unsigned char nextStateRobot = 0;
 void SetNextRobotStateInAutomaticMode() {
     unsigned char positionObstacle = PAS_D_OBSTACLE;
     //ÈDtermination de la position des obstacles en fonction des ÈÈËtlmtres
+    /*
     if (robotState.distanceTelemetreDroit < 30 &&
             robotState.distanceTelemetreCentre > 20 &&
             robotState.distanceTelemetreGauche > 30) //Obstacle ‡droite
@@ -87,6 +88,14 @@ void SetNextRobotStateInAutomaticMode() {
             robotState.distanceTelemetreCentre > 20 &&
             robotState.distanceTelemetreGauche > 30) //pas d?obstacle
         positionObstacle = PAS_D_OBSTACLE;
+     */
+    if (robotState.distanceTelemetreExtremDroit < 15 || robotState.distanceTelemetreDroit <30 || 
+            robotState.distanceTelemetreCentre < 30 || robotState.distanceTelemetreGauche < 30 || 
+            robotState.distanceTelemetreExtremGauche < 15){
+    positionObstacle = OBSTACLE_EN_FACE;
+    }
+    else {positionObstacle = PAS_D_OBSTACLE;}
+    
     //ÈDtermination de lÈ?tat ‡venir du robot
     if (positionObstacle == PAS_D_OBSTACLE)
         nextStateRobot = STATE_AVANCE;
@@ -127,14 +136,22 @@ int main(void) {
             ADCClearConversionFinishedFlag();
             unsigned int * result = ADCGetResult();
             float volts = ((float) result [0])* 3.3 / 4096;
-            robotState.distanceTelemetreGauche = 34 / volts - 5;
-            LED_BLANCHE_1 = (robotState.distanceTelemetreGauche > 30) ? 1 : 0;
+            robotState.distanceTelemetreExtremGauche = 34 / volts - 5;
+            LED_BLANCHE_1 = (robotState.distanceTelemetreExtremGauche > 30) ? 1 : 0;
+            
             volts = ((float) result [1])* 3.3 / 4096;
+            robotState.distanceTelemetreGauche = 34 / volts - 5;
+            
+            volts = ((float) result [2])* 3.3 / 4096;
             robotState.distanceTelemetreCentre = 34 / volts - 5;
             LED_BLEUE_1 = (robotState.distanceTelemetreCentre > 30) ? 1 : 0;
-            volts = ((float) result [2])* 3.3 / 4096;
+            
+            volts = ((float) result [3])* 3.3 / 4096;
             robotState.distanceTelemetreDroit = 34 / volts - 5;
-            LED_ORANGE_1 = (robotState.distanceTelemetreDroit > 30) ? 1 : 0;
+            
+            volts = ((float) result [4])* 3.3 / 4096;
+            robotState.distanceTelemetreExtremDroit = 34 / volts - 5;
+            LED_ORANGE_1 = (robotState.distanceTelemetreExtremDroit > 30) ? 1 : 0;
         }
         if (robotState.vitesseDroiteCommandeCourante <= -25 && robotState.vitesseGaucheCommandeCourante >= 25){
             LED_VERTE_1= 1;
