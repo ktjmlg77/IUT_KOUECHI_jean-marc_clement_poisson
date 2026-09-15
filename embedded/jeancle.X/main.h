@@ -32,6 +32,7 @@
 #define OBSTACLE_A_EXTREME_GAUCHE 5
 
  void SetNextRobotStateInAutomaticMode(void);
+ void consigneEvitement(void);
  void OperatingSystemLoop(void);
 
 #endif	/* MAIN_H */
