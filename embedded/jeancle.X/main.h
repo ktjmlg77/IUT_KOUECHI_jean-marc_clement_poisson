@@ -30,10 +30,19 @@
 #define OBSTACLE_EN_FACE 3
 #define OBSTACLE_A_EXTREME_DROITE 4
 #define OBSTACLE_A_EXTREME_GAUCHE 5
+// il y en a plein que j utilise plus
 
- void SetNextRobotStateInAutomaticMode(void);
- void consigneEvitement(void);
+#define SEUIL_ARRET       30.0f  // cm : distance qui déclenche l'évitement
+#define SEUIL_DEGAGE      40.0f  // cm : distance pour considérer la voie libre (hystérésis)
+#define VITESSE_CROISIERE 25.0f  // % PWM en ligne droite
+#define VITESSE_PIVOT     10.0f  // % PWM en rotation pendant l'évitement (contrainte capteurs)
+#define DUREE_PIVOT_MINI  300UL  // ms, temps mini de pivot avant de retester les capteurs
+
+// void SetNextRobotStateInAutomaticMode(void);
+// void consigneEvitement(void);
  void OperatingSystemLoop(void);
+ unsigned char PositionObstacle(void);
+ unsigned char VoieLibre(void);
 
 #endif	/* MAIN_H */
 
