@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <xc.h>
@@ -17,85 +16,218 @@ unsigned int stateRobot;
 #define Kc 400
 #define Ka 282
  */
-// ca ca detecte la direction en prenant en compte d abord le plus preoccupant
-unsigned char PositionObstacle(void) {
-    if (robotState.distanceTelemetreCentre < SEUIL_ARRET)
-        return OBSTACLE_EN_FACE;
-    if (robotState.distanceTelemetreDroit < SEUIL_ARRET)
-        return OBSTACLE_A_DROITE;
-    if (robotState.distanceTelemetreGauche < SEUIL_ARRET)
-        return OBSTACLE_A_GAUCHE;
-    if (robotState.distanceTelemetreExtremDroit < SEUIL_ARRET)
-        return OBSTACLE_A_EXTREME_DROITE;
+/****************************************************************************************************/
+// Construction du mot binaire d'etat des capteurs
+// Chaque bit vaut 1 si la distance mesuree par le capteur correspondant est
+// inferieure au seuil d'arret (obstacle proche detecte), 0 sinon.
+// Bit4=ExtremeGauche  Bit3=Gauche  Bit2=Centre  Bit1=Droit  Bit0=ExtremeDroit
+/****************************************************************************************************/
+unsigned char BuildObstacleWord(void) {
+    unsigned char word = 0;
+
     if (robotState.distanceTelemetreExtremGauche < SEUIL_ARRET)
-        return OBSTACLE_A_EXTREME_GAUCHE;
-    return PAS_D_OBSTACLE;
-}
-// PS j ai tente une nouvelle ecriture ici en gros 
-//ca agis comme une fonction et renvoi 1 si le return et vrai 
+        word |= BIT_CAPTEUR_EXTREME_GAUCHE;
+    if (robotState.distanceTelemetreGauche < SEUIL_ARRET)
+        word |= BIT_CAPTEUR_GAUCHE;
+    if (robotState.distanceTelemetreCentre < SEUIL_ARRET)
+        word |= BIT_CAPTEUR_CENTRE;
+    if (robotState.distanceTelemetreDroit < SEUIL_ARRET)
+        word |= BIT_CAPTEUR_DROIT;
+    if (robotState.distanceTelemetreExtremDroit < SEUIL_ARRET)
+        word |= BIT_CAPTEUR_EXTREME_DROIT;
 
-unsigned char VoieLibre(void) {
-    return (robotState.distanceTelemetreCentre > SEUIL_DEGAGE) &&
-            (robotState.distanceTelemetreDroit > SEUIL_DEGAGE) &&
-            (robotState.distanceTelemetreGauche > SEUIL_DEGAGE) &&
-            (robotState.distanceTelemetreExtremDroit > SEUIL_DEGAGE) &&
-            (robotState.distanceTelemetreExtremGauche > SEUIL_DEGAGE);
+    return word; // valeur sur 5 bits, de 0b00000 a 0b11111 (0 a 31)
 }
-// et ca j ai modifier pour faire comme le prof mais a ma sauce aves des truc de cachan comme le timestamp
-// j ai demande a claude de commente j avais la flemme XD
+
+/****************************************************************************************************/
+// Boucle de gestion de l'evitement : lit les 5 capteurs, construit le mot binaire
+// et pilote directement les moteurs, cas par cas, via un switch exhaustif sur les
+// 32 valeurs possibles (0b00000 a 0b11111).
+//
+// Principe de gravite retenu pour chaque bit :
+//   - capteur peripherique (EG ou ED) seul  -> poids 1 (menace faible, objet en bordure)
+//   - capteur interieur    (G  ou D)  seul  -> poids 2 (menace forte, objet proche de la trajectoire)
+//   - capteur centre (C)                    -> menace frontale directe
+//
+// Nombre de capteurs actifs (popcount) = niveau de gravite globale :
+//   0 capteur  -> on avance a pleine vitesse
+//   1 capteur  -> capteur peripherique seul : leger virage, on continue d'avancer
+//                 capteur interieur ou centre seul : pivot sur place normal (VITESSE_PIVOT)
+//   2 capteurs -> pivot sur place plus franc (VITESSE_PIVOT_FORT)
+//                 EXCEPTION : EG+ED seuls (les deux peripheriques, rien au centre ni a
+//                 l'interieur) -> le passage est degage, on avance tout droit
+//   3 capteurs -> pivot sur place fort (VITESSE_PIVOT_MAX)
+//   4 ou 5 capteurs -> le robot est reellement encercle : marche arriere (VITESSE_RECUL)
+//
+// Direction du pivot : toujours a l'oppose du cote le plus charge (poids gauche =
+// 2*G+EG, poids droit = 2*D+ED). A egalite stricte, convention fixe et documentee :
+// on pivote a droite (evite toute oscillation/indetermination).
+/****************************************************************************************************/
 void OperatingSystemLoop(void) {
-    switch (stateRobot) {
-        case PAS_D_OBSTACLE:
+    unsigned char obstacleWord = BuildObstacleWord();
+
+    switch (obstacleWord) {
+
+        /* ---------------------- 0 capteur actif : rien ---------------------- */
+        case 0b00000: // rien
             PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_DROIT);
             PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_GAUCHE);
-            stateRobot = STATE_AVANCE_EN_COURS;
+            stateRobot = STATE_AVANCE;
             break;
-        case STATE_AVANCE:
+
+        /* --------------- 1 capteur actif : peripherique seul ----------------- */
+        /* on avance toujours, simple correction de trajectoire                  */
+        case 0b00001: // ED seul -> leger virage a gauche
             PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_VIRAGE_LEGER, MOTEUR_GAUCHE);
+            stateRobot = STATE_AVANCE;
+            break;
+        case 0b10000: // EG seul -> leger virage a droite
+            PWMSetSpeedConsigne(VITESSE_VIRAGE_LEGER, MOTEUR_DROIT);
             PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_GAUCHE);
-            stateRobot = STATE_AVANCE_EN_COURS;
+            stateRobot = STATE_AVANCE;
             break;
 
-        case STATE_AVANCE_EN_COURS:
-        {
-            unsigned char obstacle = PositionObstacle();
-            if (obstacle == OBSTACLE_A_DROITE || obstacle == OBSTACLE_A_EXTREME_DROITE) {
-                stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE; // on s'écarte vers la gauche
-            } else if (obstacle == OBSTACLE_A_GAUCHE || obstacle == OBSTACLE_A_EXTREME_GAUCHE) {
-                stateRobot = STATE_TOURNE_SUR_PLACE_DROITE; // on s'écarte vers la droite
-            } else if (obstacle == OBSTACLE_EN_FACE) {
-                // obstacle pile devant : on pivote du côté le plus dégagé
-                stateRobot = (robotState.distanceTelemetreGauche >= robotState.distanceTelemetreDroit)
-                        ? STATE_TOURNE_SUR_PLACE_GAUCHE
-                        : STATE_TOURNE_SUR_PLACE_DROITE;
-            }
-            // sinon on reste en STATE_AVANCE_EN_COURS, rien à faire
-            break;
-        }
-
-        case STATE_TOURNE_SUR_PLACE_GAUCHE:
+        /* ------- 1 capteur actif : interieur seul ou centre seul ------------ */
+        /* menace plus serieuse : pivot sur place normal                       */
+        case 0b00010: // D seul -> pivot sur place a gauche
             PWMSetSpeedConsigne(VITESSE_PIVOT, MOTEUR_DROIT);
             PWMSetSpeedConsigne(-VITESSE_PIVOT, MOTEUR_GAUCHE);
-            timestamp = 0;
-            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE_EN_COURS;
+            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
             break;
-
-        case STATE_TOURNE_SUR_PLACE_GAUCHE_EN_COURS:
-            if (timestamp > DUREE_PIVOT_MINI && VoieLibre())
-                stateRobot = STATE_AVANCE;
-            // sinon on continue de pivoter (on reste dans cet état)
-            break;
-
-        case STATE_TOURNE_SUR_PLACE_DROITE:
+        case 0b01000: // G seul -> pivot sur place a droite
             PWMSetSpeedConsigne(-VITESSE_PIVOT, MOTEUR_DROIT);
             PWMSetSpeedConsigne(VITESSE_PIVOT, MOTEUR_GAUCHE);
-            timestamp = 0;
-            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE_EN_COURS;
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b00100: // C seul -> pivot sur place a droite (convention, aucun cote favorise)
+            PWMSetSpeedConsigne(-VITESSE_PIVOT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
             break;
 
-        case STATE_TOURNE_SUR_PLACE_DROITE_EN_COURS:
-            if (timestamp > DUREE_PIVOT_MINI && VoieLibre())
-                stateRobot = STATE_AVANCE;
+        /* ------------------------ 2 capteurs actifs -------------------------- */
+        case 0b10001: // EG+ED seuls -> EXCEPTION : rien au centre ni a l'interieur, voie libre, on avance
+            PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_GAUCHE);
+            stateRobot = STATE_AVANCE;
+            break;
+        case 0b00011: // D+ED (tout le cote droit) -> pivot fort a gauche
+            PWMSetSpeedConsigne(VITESSE_PIVOT_FORT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_FORT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
+            break;
+        case 0b00101: // C+ED -> pivot fort a gauche
+            PWMSetSpeedConsigne(VITESSE_PIVOT_FORT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_FORT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
+            break;
+        case 0b00110: // C+D -> pivot fort a gauche
+            PWMSetSpeedConsigne(VITESSE_PIVOT_FORT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_FORT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
+            break;
+        case 0b10010: // EG+D -> pivot fort a gauche (D plus critique que EG)
+            PWMSetSpeedConsigne(VITESSE_PIVOT_FORT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_FORT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
+            break;
+        case 0b01001: // G+ED -> pivot fort a droite (G plus critique que ED)
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_FORT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_FORT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b01010: // G+D (les deux interieurs) -> pivot fort a droite (convention, egalite)
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_FORT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_FORT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b01100: // G+C -> pivot fort a droite
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_FORT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_FORT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b10100: // EG+C -> pivot fort a droite
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_FORT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_FORT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b11000: // EG+G (tout le cote gauche) -> pivot fort a droite
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_FORT, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_FORT, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+
+        /* ------------------------ 3 capteurs actifs -------------------------- */
+        case 0b00111: // C+D+ED -> pivot max a gauche
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
+            break;
+        case 0b10011: // EG+D+ED -> pivot max a gauche
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
+            break;
+        case 0b01011: // G+D+ED -> pivot max a gauche
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
+            break;
+        case 0b10110: // EG+C+D -> pivot max a gauche
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
+            break;
+        case 0b01101: // G+C+ED -> pivot max a droite
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b01110: // G+C+D -> pivot max a droite (convention, egalite)
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b10101: // EG+C+ED -> pivot max a droite (convention, egalite)
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b11001: // EG+G+ED -> pivot max a droite
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b11010: // EG+G+D -> pivot max a droite
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+        case 0b11100: // EG+G+C -> pivot max a droite
+            PWMSetSpeedConsigne(-VITESSE_PIVOT_MAX, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(VITESSE_PIVOT_MAX, MOTEUR_GAUCHE);
+            stateRobot = STATE_TOURNE_SUR_PLACE_DROITE;
+            break;
+
+        /* --------------- 4 ou 5 capteurs actifs : encercle -------------------- */
+        /* plus aucun cote n'est sur : seule la marche arriere est sure          */
+        case 0b01111: // G+C+D+ED
+        case 0b10111: // EG+C+D+ED
+        case 0b11011: // EG+G+D+ED
+        case 0b11101: // EG+G+C+ED
+        case 0b11110: // EG+G+C+D
+        case 0b11111: // tous les capteurs
+            PWMSetSpeedConsigne(-VITESSE_RECUL, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(-VITESSE_RECUL, MOTEUR_GAUCHE);
+            stateRobot = STATE_RECULE;
+            break;
+
+        default:
+            // Cas normalement impossible (mot toujours sur 5 bits) : securite defensive, arret moteur
+            PWMSetSpeedConsigne(0, MOTEUR_DROIT);
+            PWMSetSpeedConsigne(0, MOTEUR_GAUCHE);
+            stateRobot = STATE_ARRET;
             break;
     }
 }
@@ -283,47 +415,4 @@ void consigneEvitement(void) {
 
 void SetNextRobotStateInAutomaticMode() {
     unsigned char positionObstacle = PAS_D_OBSTACLE;
-    //éDtermination de la position des obstacles en fonction des ééètlmtres
-    
-    if (robotState.distanceTelemetreDroit < 30 &&
-            robotState.distanceTelemetreCentre > 20 &&
-            robotState.distanceTelemetreGauche > 30) //Obstacle àdroite
-        positionObstacle = OBSTACLE_A_DROITE;
-    else if (robotState.distanceTelemetreDroit > 30 &&
-            robotState.distanceTelemetreCentre > 20 &&
-            robotState.distanceTelemetreGauche < 30) //Obstacle àgauche
-        positionObstacle = OBSTACLE_A_GAUCHE;
-    else if (robotState.distanceTelemetreCentre < 20) //Obstacle en face
-        positionObstacle = OBSTACLE_EN_FACE;
-    else if (robotState.distanceTelemetreDroit > 30 &&
-            robotState.distanceTelemetreCentre > 20 &&
-            robotState.distanceTelemetreGauche > 30) //pas d?obstacle
-        positionObstacle = PAS_D_OBSTACLE;
-     
-    if ((stateobs == 0 )&& ((robotState.distanceTelemetreExtremDroit <= 10) || (robotState.distanceTelemetreDroit <= 30 )||
-            (robotState.distanceTelemetreCentre <= 30 ) || (robotState.distanceTelemetreGauche <= 30) ||
-            (robotState.distanceTelemetreExtremGauche <= 10))) {
-        stateobs = 1;
-        positionObstacle = OBSTACLE_EN_FACE;
-
-    } else if ((stateobs == 1) && ((robotState.distanceTelemetreDroit > 10 )||
-            (robotState.distanceTelemetreCentre > 10) || (robotState.distanceTelemetreGauche > 10))) {
-        positionObstacle = PAS_D_OBSTACLE;
-    }
-
-
-    //éDtermination de lé?tat àvenir du robot
-    if (positionObstacle == PAS_D_OBSTACLE)
-        nextStateRobot = STATE_AVANCE;
-    else if (positionObstacle == OBSTACLE_A_DROITE)
-        nextStateRobot = STATE_TOURNE_GAUCHE;
-    else if (positionObstacle == OBSTACLE_A_GAUCHE)
-        nextStateRobot = STATE_TOURNE_DROITE;
-    else if (positionObstacle == OBSTACLE_EN_FACE)
-        nextStateRobot = STATE_TOURNE_SUR_PLACE_GAUCHE;
-    //Si l?on n?est pas dans la transition de lé?tape en cours
-    if (nextStateRobot != stateRobot - 1)
-        stateRobot = nextStateRobot;
-}
-
- */
+    //
