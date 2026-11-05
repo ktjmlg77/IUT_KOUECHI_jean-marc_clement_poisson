@@ -45,6 +45,14 @@ unsigned char VoieLibre(void) {
 // j ai demande a claude de commente j avais la flemme XD
 void OperatingSystemLoop(void) {
     switch (stateRobot) {
+        case STATE_ATTENDRE :
+            
+            if(timestamp2 >= 750) {
+                stateRobot = STATE_AVANCE_EN_COURS;
+                timestamp2 = 0 ;
+            }
+            
+            break;
         case PAS_D_OBSTACLE:
             PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_DROIT);
             PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_GAUCHE);
@@ -120,11 +128,30 @@ int main(void) {
     PWM_EN = 1;
 
 
+    robotState.active = 0;
 //PWMSetSpeedConsigne(MOTEUR_DROIT, 20);
 //PWMSetSpeedConsigne(MOTEUR_GAUCHE, 20);
 // Boucle Principale
 
 while(1) {
+    
+    if(robotState.active){
+            if(timestamp2 >= 60000 || BT2){
+                robotState.active = 0;
+            }
+    }
+    else {
+        PWMSetSpeedConsigne(0, MOTEUR_DROIT);
+        PWMSetSpeedConsigne(0, MOTEUR_GAUCHE);
+            
+        if(BT1){
+            robotState.active = 1;
+            stateRobot = STATE_ATTENDRE;
+        }
+            
+        timestamp2 = 0;
+    }
+    
     if (ADCIsConversionFinished()) {
         ADCClearConversionFinishedFlag();
         unsigned int * result = ADCGetResult();

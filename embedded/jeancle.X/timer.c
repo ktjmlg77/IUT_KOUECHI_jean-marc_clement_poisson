@@ -11,6 +11,7 @@
 unsigned char toggle = 0;
 uint32_t FCY = 60000000;
 unsigned long timestamp = 0;
+unsigned long timestamp2 = 0;
 
 void SetFreqTimer1(float freq) {
     T1CONbits.TCKPS = 0b00; //00 = 1:1 prescaler value
@@ -80,7 +81,11 @@ void InitTimer4(void) {
 void __attribute__((interrupt, no_auto_psv)) _T4Interrupt(void) {
      IFS1bits.T4IF = 0; // Clear Timer3 Interrupt Flag
      timestamp++;
-     OperatingSystemLoop();
+     timestamp2 ++;
+     if(robotState.active){
+        OperatingSystemLoop();
+    }
+     
 }
 //Initialisation d?un timer 32 bits
 

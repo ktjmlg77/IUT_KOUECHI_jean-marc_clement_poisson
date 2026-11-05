@@ -30,6 +30,7 @@
 #define OBSTACLE_EN_FACE 3
 #define OBSTACLE_A_EXTREME_DROITE 4
 #define OBSTACLE_A_EXTREME_GAUCHE 5
+#define STATE_ATTENDRE 100
 // il y en a plein que j utilise plus
 
 #define SEUIL_ARRET       25.0f  // cm : distance qui déclenche l'évitement
