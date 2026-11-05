@@ -4,6 +4,7 @@
 
 typedef struct robotStateBITS {
     unsigned char taskEnCours;
+    int robotActif;
     float vitesseGaucheConsigne;
     float vitesseGaucheCommandeCourante;
     float vitesseDroiteConsigne;

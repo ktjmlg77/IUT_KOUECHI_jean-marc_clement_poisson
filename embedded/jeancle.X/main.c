@@ -64,12 +64,23 @@ unsigned char BuildObstacleWord(void) {
 // on pivote a droite (evite toute oscillation/indetermination).
 /****************************************************************************************************/
 void OperatingSystemLoop(void) {
+<<<<<<< Updated upstream
     unsigned char obstacleWord = BuildObstacleWord();
 
     switch (obstacleWord) {
 
         /* ---------------------- 0 capteur actif : rien ---------------------- */
         case 0b00000: // rien
+=======
+    switch (stateRobot) {
+        case STATE_ATTENDRE :
+            if(timestampFunction >= 1000){
+                stateRobot = PAS_D_OBSTACLE;
+                timestampFunction = 0;
+            }
+            break;
+        case PAS_D_OBSTACLE:
+>>>>>>> Stashed changes
             PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_DROIT);
             PWMSetSpeedConsigne(VITESSE_CROISIERE, MOTEUR_GAUCHE);
             stateRobot = STATE_AVANCE;
@@ -250,7 +261,7 @@ int main(void) {
     LED_ROUGE_1 = 0;
     LED_VERTE_1 = 0;
     PWM_EN = 1;
-
+    robotState.robotActif = 0;
 
 //PWMSetSpeedConsigne(MOTEUR_DROIT, 20);
 //PWMSetSpeedConsigne(MOTEUR_GAUCHE, 20);
@@ -280,6 +291,25 @@ while(1) {
         robotState.distanceTelemetreExtremDroit = 34 / volts - 5;
         LED_VERTE_1 = (robotState.distanceTelemetreExtremDroit > 30) ? 0 : 1;
     }
+    
+    if(robotState.robotActif){
+            if(timestampFunction >= 60000 || BT2){
+                robotState.robotActif = 0;
+            }
+    }
+    else {
+        PWMSetSpeedConsigne(0, MOTEUR_DROIT);
+        PWMSetSpeedConsigne(0, MOTEUR_GAUCHE);
+            
+        if(BT1){
+            robotState.robotActif = 1;
+            stateRobot = STATE_ATTENDRE;
+        }
+            
+        timestampFunction = 0;
+    }
+    
+    
     if (robotState.vitesseDroiteCommandeCourante <= -25 && robotState.vitesseGaucheCommandeCourante >= 25) {
         LED_BLANCHE_2 = 1;
     } else {

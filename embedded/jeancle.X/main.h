@@ -30,8 +30,10 @@
 #define OBSTACLE_EN_FACE 3
 #define OBSTACLE_A_EXTREME_DROITE 4
 #define OBSTACLE_A_EXTREME_GAUCHE 5
+#define STATE_ATTENDRE 1000
 // il y en a plein que j utilise plus
 
+<<<<<<< Updated upstream
 #define SEUIL_ARRET       25.0f  // cm : distance qui dï¿½clenche l'ï¿½vitement
 #define SEUIL_DEGAGE      20.0f  // cm : distance pour considï¿½rer la voie libre (hystï¿½rï¿½sis)
 #define VITESSE_CROISIERE 25.0f  // % PWM en ligne droite
@@ -45,6 +47,13 @@
 #define BIT_CAPTEUR_CENTRE         (1 << 2)
 #define BIT_CAPTEUR_DROIT          (1 << 1)
 #define BIT_CAPTEUR_EXTREME_DROIT  (1 << 0)
+=======
+#define SEUIL_ARRET       26.0f  // cm : distance qui déclenche l'évitement
+#define SEUIL_DEGAGE      25.0f  // cm : distance pour considérer la voie libre (hystérésis)
+#define VITESSE_CROISIERE 30.0f  // % PWM en ligne droite
+#define VITESSE_PIVOT     10.0f  // % PWM en rotation pendant l'évitement (contrainte capteurs)
+#define DUREE_PIVOT_MINI  1UL  // ms, temps mini de pivot avant de retester les capteurs
+>>>>>>> Stashed changes
 
 /****************************************************************************************************/
 // Vitesses utilisees par la table de decision (main.c), graduees selon la gravite
