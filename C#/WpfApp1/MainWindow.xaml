@@ -27,7 +27,28 @@
         <GroupBox x:Name="Emission" Header=" Emission" Background="#FFDDDDDD" BorderBrush="Black" Grid.Row="1" Grid.Column="3">
             <TextBox x:Name="textBoxEmission" TextWrapping="Wrap" Background="Transparent" BorderBrush="#00ABADB3" AcceptsReturn="True" KeyUp="textBoxEmission_KeyUp"/>
         </GroupBox>
-        <Button x:Name="boutonenvoy" Grid.Column="3" Content="Envoyer" Grid.Row="3" Margin="100,0,100,0" Click="boutonenvoy_Click"/>
+        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="5"
+            Orientation="Horizontal" HorizontalAlignment="Center"
+            >
+
+            <Button x:Name="boutonGauche"
+            Content="Bouton gauche"
+            Width="155"
+            Margin="10,0"/>
+
+            <Button x:Name="clear"
+            Content="Clear"
+            Width="155"
+            Margin="10,0"
+            Click="clear_Click"/>
+
+            <Button x:Name="boutonenvoy"
+            Content="Envoyer"
+            Width="155"
+            Margin="10,0"
+            Click="boutonenvoy_Click" />
+
+        </StackPanel>
 
     </Grid>
 </Window>
