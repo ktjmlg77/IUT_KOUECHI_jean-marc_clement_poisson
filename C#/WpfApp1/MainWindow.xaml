@@ -31,10 +31,11 @@
             Orientation="Horizontal" HorizontalAlignment="Center"
             >
 
-            <Button x:Name="boutonGauche"
-            Content="Bouton gauche"
+            <Button x:Name="Test"
+            Content="Test"
             Width="155"
-            Margin="10,0"/>
+            Margin="10,0"
+            Click="Test_Click"/>
 
             <Button x:Name="clear"
             Content="Clear"

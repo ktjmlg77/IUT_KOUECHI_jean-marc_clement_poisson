@@ -27,8 +27,9 @@ namespace WpfApp1
 
     {
         
+        Byte[] bytelist = new byte[20];
+        Robot robot = new Robot();
         ExtendedSerialPort serialPort1;
-        private string receivedText = string.Empty;
         private bool colorbutton = false;
         public MainWindow()
         {
@@ -40,6 +41,8 @@ namespace WpfApp1
             timerAffichage.Tick += TimerAffichage_Tick;
             timerAffichage.Start();
 
+            
+
             serialPort1 = new ExtendedSerialPort("COM3", 115200, Parity.None, 8, StopBits.One);
             serialPort1.DataReceived += SerialPort1_DataReceived;
             serialPort1.Open();
@@ -48,12 +51,22 @@ namespace WpfApp1
         }
         void TimerAffichage_Tick(object? sender, EventArgs e)
         {
-            RichTextBox.Text += receivedText;
-            receivedText = string.Empty;
+            foreach (byte b in robot.byteListReceived)
+            {
+                RichTextBox.Text += "0x";
+                RichTextBox.Text += b.ToString("X2");
+                RichTextBox.Text += " ";
+
+            }
+            robot.byteListReceived.Clear();
+
         }
         private void SerialPort1_DataReceived(object? sender, DataReceivedArgs e)
         {
-            receivedText += Encoding.UTF8.GetString(e.Data, 0, e.Data.Length);
+            foreach (byte b in e.Data)
+            {
+                robot.byteListReceived.Enqueue(b);
+            }
         }
 
         private void SendMessage()
@@ -89,6 +102,15 @@ namespace WpfApp1
         private void clear_Click(object sender, RoutedEventArgs e)
         {
             RichTextBox.Clear();
+        }
+
+        private void Test_Click(object sender, RoutedEventArgs e)
+        {
+            for (int i = 0; i < bytelist.Length; i++)
+            {
+                bytelist[i] = (byte)(2 * i);
+            }
+            serialPort1.Write(bytelist, 0, bytelist.Length);
         }
     }
 }
